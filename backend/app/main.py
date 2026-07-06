@@ -40,14 +40,14 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-app.include_router(auth.router)
-app.include_router(recipes.router)
-app.include_router(user_recipes.router)
-app.include_router(menu.router)
-app.include_router(shopping.router)
-app.include_router(events.router)
-app.include_router(products.router)
-app.include_router(canonical_foods_router)
+app.include_router(auth.router, prefix="/api")
+app.include_router(recipes.router, prefix="/api")
+app.include_router(user_recipes.router, prefix="/api")
+app.include_router(menu.router, prefix="/api")
+app.include_router(shopping.router, prefix="/api")
+app.include_router(events.router, prefix="/api")
+app.include_router(products.router, prefix="/api")
+app.include_router(canonical_foods_router, prefix="/api")
 app.include_router(seo_router, prefix="/api/seo", tags=["seo"])
 
 @app.get("/", tags=["health"])
