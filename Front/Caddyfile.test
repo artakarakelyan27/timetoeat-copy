@@ -1,0 +1,80 @@
+# Caddyfile.test — конфиг для тестового домена timetoeat.tw1.ru
+#
+# Использование:
+#   sudo cp Caddyfile.test /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# Что делает:
+#   1. /api/*           → FastAPI на :8000 (если он запущен)
+#   2. SEO-префиксы     → статика из seo/.output/public (после nuxt generate)
+#   3. /og/*            → Nuxt-сервер на :3001 (если запущен; иначе 502)
+#   4. всё остальное    → Vue SPA из dist/
+
+{
+	# Глобальный email для Let's Encrypt сертификатов
+	email admin@timetoeat.tw1.ru
+}
+
+timetoeat.tw1.ru {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# noindex для тестового домена — чтоб не попал в индекс Google/Yandex
+		X-Robots-Tag "noindex, nofollow"
+	}
+
+	# ─── 1. API → FastAPI ─────────────────────────────────
+	# Если на тесте бэк не поднят — этот блок будет отдавать 502, и SPA увидит ошибку.
+	# Можно временно проксировать /api на боевой prod (см. закомментированный вариант).
+	handle /api/* {
+		reverse_proxy localhost:8000
+		# Альтернатива (для теста SEO без локального бэка):
+		# reverse_proxy https://plus-time.ru {
+		#     header_up Host plus-time.ru
+		# }
+	}
+
+	# ─── 2. SEO-зона: статика из seo/.output/public ───────
+	@seo path /recepty* /iz/* /iz-ostatkov* /chto-prigotovit* /menyu-na-nedelyu* \
+	         /spravochnik* /kak-gotovit* /sezon* /gotovim-vprok* /blog* /o-proekte* \
+	         /sitemap.xml /sitemap-*.xml /robots.txt /favicon.svg
+
+	handle @seo {
+		root * /var/www/time-to-eat-copy/Front/seo/.output/public
+		try_files {path} {path}/ {path}.html /200.html
+		file_server
+
+		@assets path *.css *.js *.woff2 *.png *.svg *.webp *.avif
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+	}
+
+	# ─── 2b. OG-картинки: динамика через Nuxt-сервер ──────
+	# Требует запущенного `nuxt preview` на :3001 (см. инструкцию).
+	# Если /og/* не нужны на тесте — закомментируй блок, тогда socialы шарят default OG.
+	handle /og/* {
+		reverse_proxy localhost:3001
+	}
+
+	# ─── 2c. _content API для server-роутов Nuxt ──────────
+	handle /api/_content/* {
+		reverse_proxy localhost:3001
+	}
+
+	# ─── 3. SPA → Vue 3 из dist/ ──────────────────────────
+	handle {
+		root * /var/www/time-to-eat-copy/Front/dist
+		try_files {path} /index.html
+		file_server
+
+		@spa_assets path *.css *.js *.woff2 *.png *.svg *.webp *.avif
+		header @spa_assets Cache-Control "public, max-age=31536000, immutable"
+	}
+
+	log {
+		output file /var/log/caddy/timetoeat.log
+		format json
+	}
+}

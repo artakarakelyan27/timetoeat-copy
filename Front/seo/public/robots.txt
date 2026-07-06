@@ -1,0 +1,35 @@
+# robots.txt для plus-time.ru
+# SPA-зоны (онбординг, ЛК, авторизация) закрываем — там нет SEO-контента.
+#
+# На ТЕСТОВОМ домене (timetoeat.tw1.ru) этот файл всё равно отдаётся,
+# но nginx-конфиг добавляет заголовок X-Robots-Tag: noindex, nofollow,
+# который перебивает разрешающую директиву Allow здесь.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /auth
+Disallow: /lk/
+Disallow: /onboarding
+Disallow: /profile
+Disallow: /saved
+Disallow: /recipes/create
+Disallow: /prices
+Disallow: /*?sort=
+Disallow: /*?filter=
+Disallow: /*?page=
+
+Sitemap: https://plus-time.ru/sitemap.xml
+
+User-agent: Yandex
+Allow: /
+Disallow: /api/
+Disallow: /auth
+Disallow: /lk/
+Disallow: /onboarding
+Disallow: /profile
+Disallow: /saved
+Disallow: /recipes/create
+Disallow: /prices
+Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content
+Host: plus-time.ru

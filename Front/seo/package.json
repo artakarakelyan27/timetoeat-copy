@@ -1,0 +1,35 @@
+{
+  "name": "plus-time-seo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SEO-зона plus-time.ru на Nuxt 3 (SSG)",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --port 3001",
+    "build": "nuxt build",
+    "generate": "nuxt generate && node scripts/check-links.mjs",
+    "generate:nocheck": "nuxt generate",
+    "preview": "nuxt preview --port 3001",
+    "postinstall": "nuxt prepare",
+    "lint:stopwords": "node scripts/check-stopwords.mjs",
+    "lint:links": "node scripts/check-links.mjs"
+  },
+  "dependencies": {
+    "@plus-time/design-tokens": "workspace:*",
+    "@resvg/resvg-js": "2.6.2",
+    "nuxt": "3.13.2",
+    "satori": "0.11.2",
+    "vue": "3.5.12",
+    "vue-router": "4.4.5",
+    "yaml": "2.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.7.4",
+    "typescript": "5.6.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "h3": "1.13.0"
+    }
+  }
+}

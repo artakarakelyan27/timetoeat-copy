@@ -1,0 +1,136 @@
+/* base.css — минимальный reset поверх токенов.
+ * Не дублирует то, что уже есть в @plus-time/design-tokens/css.
+ */
+
+* {
+	box-sizing: border-box;
+}
+
+a {
+	color: var(--gd);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	text-decoration-thickness: 1px;
+	transition: color 0.15s var(--ease-out);
+}
+
+a:hover {
+	color: var(--g);
+}
+
+a:focus-visible {
+	outline: 3px solid var(--g);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+h1, h2, h3, h4 {
+	font-family: var(--ff-display);
+	color: var(--t1);
+	margin: 0 0 var(--md);
+	line-height: 1.3;
+}
+
+h1 {
+	font-size: clamp(1.6rem, 5vw, 2.2rem);
+	font-weight: 800;
+}
+
+h2 {
+	font-family: var(--ff-text);
+	font-size: 1.1rem;
+	font-weight: 700;
+	margin-top: var(--xxl);
+}
+
+h3 {
+	font-family: var(--ff-text);
+	font-size: 1rem;
+	font-weight: 600;
+	margin-top: var(--xl);
+}
+
+p {
+	margin: 0 0 var(--md);
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+}
+
+/* Базовые карточки */
+.card {
+	background: var(--surf);
+	border-radius: var(--r-card);
+	box-shadow: var(--sh1);
+	padding: var(--lg);
+}
+
+/* Карточка рецепта на основе emoji + bg_color (без фото) */
+.recipe-card-emoji {
+	background: var(--surf);
+	border-radius: var(--r-card);
+	box-shadow: var(--sh1);
+	overflow: hidden;
+	display: block;
+	color: var(--t1);
+	text-decoration: none;
+	transition: transform 0.2s var(--ease-spring), box-shadow 0.2s var(--ease-out);
+}
+
+.recipe-card-emoji:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--sh2);
+	color: var(--t1);
+}
+
+.recipe-card-emoji__hero {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 160px;
+	font-size: 64px;
+	line-height: 1;
+}
+
+.recipe-card-emoji__body {
+	padding: var(--md);
+}
+
+.recipe-card-emoji__title {
+	font-family: var(--ff-display);
+	font-weight: 800;
+	font-size: 1.05rem;
+	margin: 0 0 var(--xs);
+}
+
+.recipe-card-emoji__meta {
+	font-size: 0.8rem;
+	color: var(--t3);
+	display: flex;
+	gap: var(--sm);
+	flex-wrap: wrap;
+}
+
+/* Хлебные крошки */
+.crumbs {
+	font-size: 0.8rem;
+	color: var(--t3);
+	margin-bottom: var(--md);
+}
+
+.crumbs a {
+	color: var(--t3);
+	text-decoration: none;
+}
+
+.crumbs a:hover {
+	color: var(--gd);
+	text-decoration: underline;
+}
+
+.crumbs__sep {
+	margin: 0 var(--xs);
+	color: var(--t-dis);
+}

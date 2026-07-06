@@ -1,0 +1,92 @@
+CREATE TABLE canonical_foods (
+	id INTEGER NOT NULL, 
+	name VARCHAR NOT NULL, 
+	aliases JSON NOT NULL, 
+	category VARCHAR NOT NULL, 
+	base_unit VARCHAR(8) NOT NULL, 
+	piece_weight_g FLOAT, 
+	density_g_per_ml FLOAT, 
+	kcal_per_100g FLOAT, 
+	protein_per_100g FLOAT, 
+	fat_per_100g FLOAT, 
+	carbs_per_100g FLOAT, 
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX ix_canonical_foods_name ON canonical_foods (name);
+CREATE INDEX ix_canonical_foods_category ON canonical_foods (category);
+CREATE TABLE IF NOT EXISTS "ingredients" (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    recipe_id INTEGER REFERENCES recipes(id),
+                    user_recipe_id INTEGER REFERENCES user_recipes(id),
+                    name VARCHAR NOT NULL,
+                    quantity VARCHAR,
+                    category VARCHAR DEFAULT '📦 Прочее',
+                    "order" INTEGER DEFAULT 0, canonical_food_id INTEGER REFERENCES canonical_foods(id),
+                    CONSTRAINT ck_ingredient_one_parent CHECK (
+                        (recipe_id IS NOT NULL AND user_recipe_id IS NULL)
+                        OR (recipe_id IS NULL AND user_recipe_id IS NOT NULL)
+                    )
+                );
+CREATE INDEX ix_ingredients_id ON ingredients (id);
+CREATE INDEX ix_ingredients_recipe_id ON ingredients (recipe_id);
+CREATE INDEX ix_ingredients_user_recipe_id ON ingredients (user_recipe_id);
+CREATE TABLE recipes (
+	id INTEGER NOT NULL, 
+	slug VARCHAR, 
+	name VARCHAR NOT NULL, 
+	emoji VARCHAR, 
+	bg_color VARCHAR, 
+	description TEXT, 
+	meal_type VARCHAR NOT NULL, 
+	cuisine VARCHAR, 
+	time_minutes INTEGER, 
+	kcal INTEGER, 
+	proteins FLOAT, 
+	fats FLOAT, 
+	carbs FLOAT, 
+	is_vegetarian BOOLEAN, 
+	is_fast BOOLEAN, 
+	is_gluten_free BOOLEAN, 
+	is_lactose_free BOOLEAN, 
+	steps JSON, 
+	image_url VARCHAR, ingredient_ids TEXT DEFAULT NULL, source_url TEXT DEFAULT NULL, category TEXT DEFAULT NULL, rating TEXT DEFAULT NULL, tags JSON, created_by INTEGER, is_vegan BOOLEAN DEFAULT 0, 
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX ix_recipes_slug ON recipes (slug);
+CREATE INDEX ix_recipes_id ON recipes (id);
+CREATE INDEX ix_recipes_created_by ON recipes (created_by);
+CREATE TABLE user_recipes (
+	id INTEGER NOT NULL, 
+	slug VARCHAR, 
+	name VARCHAR NOT NULL, 
+	emoji VARCHAR, 
+	bg_color VARCHAR, 
+	description TEXT, 
+	meal_type VARCHAR, 
+	cuisine VARCHAR, 
+	category VARCHAR, 
+	time_minutes INTEGER, 
+	kcal FLOAT, 
+	proteins FLOAT, 
+	fats FLOAT, 
+	carbs FLOAT, 
+	is_vegetarian BOOLEAN, 
+	is_vegan BOOLEAN, 
+	is_fast BOOLEAN, 
+	is_gluten_free BOOLEAN, 
+	is_lactose_free BOOLEAN, 
+	steps JSON, 
+	tags JSON, 
+	image_url VARCHAR, 
+	created_by INTEGER NOT NULL, 
+	created_at DATETIME DEFAULT (CURRENT_TIMESTAMP) NOT NULL, 
+	updated_at DATETIME DEFAULT (CURRENT_TIMESTAMP) NOT NULL, 
+	is_active BOOLEAN NOT NULL, visibility VARCHAR(16) NOT NULL DEFAULT 'private', 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(created_by) REFERENCES users (id)
+);
+CREATE INDEX ix_user_recipes_created_by ON user_recipes (created_by);
+CREATE INDEX ix_user_recipes_id ON user_recipes (id);
+CREATE INDEX ix_user_recipes_is_active ON user_recipes (is_active);
+CREATE INDEX ix_user_recipes_slug ON user_recipes (slug);
+CREATE INDEX ix_user_recipes_visibility ON user_recipes(visibility);

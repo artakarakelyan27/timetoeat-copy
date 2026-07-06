@@ -1,0 +1,27 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./menuday.db")
+
+# SQLite-специфичный аргумент — разрешает использовать одно соединение в нескольких потоках
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def get_db():
+    """Dependency для FastAPI — открывает сессию и закрывает после запроса."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       VIEWPORT — viewport-fit=cover ОБЯЗАТЕЛЕН для использования env(safe-area-inset-*)
+       Без него iPhone X+ вернёт 0px для всех инсетов и контент уедет под чёлку.
+       interactive-widget=resizes-content — клавиатура iOS не ломает вёрстку.
+       ════════════════════════════════════════════════════════════════════ -->
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ОСНОВНЫЕ МЕТА-ДАННЫЕ
+       ════════════════════════════════════════════════════════════════════ -->
+  <title>Время Есть — меню на неделю и сравнение цен</title>
+  <meta name="description"
+    content="Персональное меню на неделю за 60 секунд. Список покупок и сравнение цен в Самокате, Яндекс Лавке. Бесплатно.">
+  <meta name="keywords" content="меню на неделю, рецепты, список покупок, сравнение цен доставки, планирование питания">
+  <meta name="author" content="Время Есть">
+  <meta name="application-name" content="Время Есть">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="format-detection" content="address=no">
+  <meta name="format-detection" content="date=no">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       PWA — MANIFEST И ЦВЕТА
+       theme-color управляет цветом адресной строки в Chrome / status bar в TWA.
+       Используем media-queries чтобы цвет адаптировался под dark mode (V2).
+       ════════════════════════════════════════════════════════════════════ -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#45AE6B" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1E6D38" media="(prefers-color-scheme: dark)">
+  <meta name="msapplication-TileColor" content="#45AE6B">
+  <meta name="msapplication-config" content="none">
+  <meta name="color-scheme" content="light">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       APPLE / iOS — STANDALONE MODE
+       apple-mobile-web-app-capable: запускает PWA как нативное приложение
+         (без Safari UI). Deprecated в пользу manifest display:standalone,
+         но iOS до сих пор смотрит сюда — оставляем оба.
+       black-translucent: status bar становится прозрачным, контент идёт
+         под него — обязательно использовать env(safe-area-inset-top).
+       apple-mobile-web-app-title: имя на экране Home (≤12 символов).
+       ════════════════════════════════════════════════════════════════════ -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Время Есть">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ИКОНКИ
+       favicon.svg — основная (Chrome, Edge, Firefox масштабируют сами).
+       apple-touch-icon — 180×180, без прозрачности (iOS добавит свой radius).
+       ════════════════════════════════════════════════════════════════════ -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+
+  <!-- iOS Home Screen icon. На современных iOS достаточно 180×180.
+       Не указываем sizes="..." — Safari возьмёт самый большой подходящий. -->
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       APPLE SPLASH SCREENS (Launch Images)
+       iOS не использует splash из manifest — нужны отдельные PNG под каждое
+       разрешение устройства. Генерация: https://progressier.com/pwa-icons-and-ios-splash-screen-generator
+       или CLI `pwa-asset-generator`.
+       Перечисляю набор для современных iPhone (2020+) и iPad.
+       Размеры даны в физических пикселях × @2x/@3x.
+       Файлы должны лежать в /public/splash/ — генерируйте через pwa-asset-generator.
+       ════════════════════════════════════════════════════════════════════ -->
+
+  <!-- iPhone 14 Pro Max (430×932 @3x = 1290×2796) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)"
+    href="/splash/iphone-14-pro-max.png">
+
+  <!-- iPhone 14 Pro / 15 Pro (393×852 @3x = 1179×2556) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)"
+    href="/splash/iphone-14-pro.png">
+
+  <!-- iPhone 14 / 13 / 12 (390×844 @3x = 1170×2532) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+    href="/splash/iphone-14.png">
+
+  <!-- iPhone 14 Plus / 13 Pro Max / 12 Pro Max (428×926 @3x = 1284×2778) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)"
+    href="/splash/iphone-14-plus.png">
+
+  <!-- iPhone 13 mini / 12 mini (375×812 @3x = 1125×2436) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)"
+    href="/splash/iphone-13-mini.png">
+
+  <!-- iPhone 8 Plus / 7 Plus (414×736 @3x = 1242×2208) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)"
+    href="/splash/iphone-8-plus.png">
+
+  <!-- iPhone 8 / 7 / 6s / SE 2nd (375×667 @2x = 750×1334) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)"
+    href="/splash/iphone-8.png">
+
+  <!-- iPhone SE 1st / 5s (320×568 @2x = 640×1136) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)"
+    href="/splash/iphone-se.png">
+
+  <!-- iPad Pro 12.9" (1024×1366 @2x = 2048×2732) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)"
+    href="/splash/ipad-pro-12.png">
+
+  <!-- iPad Pro 11" / Air (834×1194 @2x = 1668×2388) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)"
+    href="/splash/ipad-pro-11.png">
+
+  <!-- iPad mini / Air (768×1024 @2x = 1536×2048) -->
+  <link rel="apple-touch-startup-image"
+    media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)"
+    href="/splash/ipad.png">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       OPEN GRAPH / TWITTER — для шеринга в соцсетях и мессенджерах
+       ════════════════════════════════════════════════════════════════════ -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Время Есть">
+  <meta property="og:title" content="Время Есть — меню на неделю за 60 секунд">
+  <meta property="og:description"
+    content="Персональное меню, список покупок и сравнение цен в сервисах доставки. Бесплатно.">
+  <meta property="og:image" content="/og/og-cover-1200x630.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:url" content="https://vremya-est.ru/">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Время Есть">
+  <meta name="twitter:description" content="Меню на неделю за 60 секунд. Сравнение цен в доставках.">
+  <meta name="twitter:image" content="/og/og-cover-1200x630.png">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ШРИФТЫ — DM Sans + Playfair Display (брендбук стр. 7)
+       preconnect ускоряет first paint на ~150ms за счёт раннего DNS+TLS.
+       display=swap — текст рендерится сразу системным fallback.
+       ════════════════════════════════════════════════════════════════════ -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,800&display=swap">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,800&display=swap">
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       АНТИ-FOUC + БАЗОВЫЕ ПЕРЕМЕННЫЕ ДО ЗАГРУЗКИ CSS
+       Эта инлайн-стилизация устраняет «вспышку белого» при загрузке PWA.
+       Цвет фона и базовые safe-area переменные доступны мгновенно.
+       ════════════════════════════════════════════════════════════════════ -->
+  <style>
+    :root {
+      --bg: #F7FAF7;
+      --t1: #1A2E22;
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--t1);
+      font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* Фон под home-indicator на iOS standalone — иначе будет белая полоса */
+    body {
+      background: var(--bg);
+      min-height: 100dvh;
+    }
+
+    /* Скрываем содержимое до загрузки JS чтобы не было «прыжка» */
+    #app:empty::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+    }
+  </style>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       PRELOAD КЛЮЧЕВЫХ АССЕТОВ
+       Vite сам добавит modulepreload для main.js, но логотип в SplashScreen
+       стоит preload явно — он рендерится в первый кадр.
+       ════════════════════════════════════════════════════════════════════ -->
+  <link rel="preload" as="image" href="/icons/android-chrome-192x192.png" fetchpriority="high">
+
+  <!-- DNS-prefetch для CDN изображений рецептов (cloudflare R2) -->
+  <link rel="dns-prefetch" href="https://images.vremya-est.ru">
+
+
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function (m, e, t, r, i, k, a) {
+      m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) };
+      m[i].l = 1 * new Date();
+      for (var j = 0; j < document.scripts.length; j++) { if (document.scripts[j].src === r) { return; } }
+      k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a)
+    })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id=109134522', 'ym');
+
+    ym(109134522, 'init', { ssr: true, webvisor: true, trackHash: true, clickmap: true, ecommerce: "dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce: true, trackLinks: true });
+  </script>
+  <noscript>
+    <div><img src="https://mc.yandex.ru/watch/109134522" style="position:absolute; left:-9999px;" alt="" /></div>
+  </noscript>
+  <!-- /Yandex.Metrika counter -->
+
+</head>
+
+<body>
+  <!-- ════════════════════════════════════════════════════════════════════
+       SKIP LINK — клавиатурная навигация (WCAG 2.4.1)
+       Виден только при focus, ведёт сразу к main контенту.
+       ════════════════════════════════════════════════════════════════════ -->
+  <a href="#main-content" class="skip-link">Перейти к содержимому</a>
+
+  <!-- Точка монтирования Vue -->
+  <div id="app"></div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       NOSCRIPT — пользователь без JS получает осмысленное сообщение
+       вместо пустой страницы.
+       ════════════════════════════════════════════════════════════════════ -->
+  <noscript>
+    <div style="padding:2rem;text-align:center;font-family:system-ui;">
+      <h1 style="font-size:1.5rem;color:#1A2E22;margin-bottom:1rem;">Время Есть</h1>
+      <p style="color:#3A5445;line-height:1.5;">
+        Для работы приложения необходимо включить JavaScript в настройках браузера.
+      </p>
+    </div>
+  </noscript>
+
+  <!-- Vite-инжектируемый bundle. Тип module — нужен для tree-shaking. -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

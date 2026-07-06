@@ -1,0 +1,50 @@
+# Простая прод-композиция. Хост Caddy сам ходит к контейнерам.
+#
+# Замечание: для соло-проекта это минимально достаточно. Если будет нужен
+# дополнительный нагруз — добавляй replicas в backend и Nuxt, Caddy
+# умеет round-robin через reverse_proxy.
+
+version: "3.9"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./spa/dist:/var/www/plus-time/spa/dist:ro
+      - ./seo/.output/public:/var/www/plus-time/seo/.output/public:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - FRONTEND_URL=https://plus-time.ru
+    expose:
+      - "8000"
+    network_mode: "host"   # упрощает доступ Caddy → :8000
+
+  # Nuxt server держим запущенным только если у нас есть on-demand endpoints
+  # (OG-картинки). Если делаешь чистый SSG — можно убрать и проксировать /og/*
+  # на Nuxt в момент билда (выгружать заранее всё).
+  seo:
+    build:
+      context: ./seo
+    restart: unless-stopped
+    environment:
+      - API_BASE=http://localhost:8000
+      - NITRO_PORT=3001
+    network_mode: "host"
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,4 @@
+*.db
+*.db.backup*
+backend/venv/
+node_modules/

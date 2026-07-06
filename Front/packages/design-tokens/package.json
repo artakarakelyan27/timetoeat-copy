@@ -1,0 +1,20 @@
+{
+  "name": "@plus-time/design-tokens",
+  "version": "1.0.0",
+  "description": "Дизайн-токены бренда «Время Есть». Источник правды — brandbook_vremya_est.pdf раздел 13.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./css": "./tokens.css",
+    "./meals": "./meals.js"
+  },
+  "files": [
+    "index.js",
+    "tokens.css",
+    "meals.js"
+  ],
+  "sideEffects": [
+    "*.css"
+  ]
+}

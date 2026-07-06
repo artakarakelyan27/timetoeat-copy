@@ -1,0 +1,4 @@
+const index_vue_vue_type_style_index_0_scoped_d05a79d0_lang = ".lead[data-v-d05a79d0]{color:var(--t2);line-height:1.55}.lead[data-v-d05a79d0],.placeholder[data-v-d05a79d0]{margin-bottom:var(--xl)}.placeholder[data-v-d05a79d0]{background:var(--surf);border-radius:var(--r-card);box-shadow:var(--sh1);padding:var(--xl)}.placeholder h2[data-v-d05a79d0]{font-size:1.1rem;margin-top:0}.placeholder__list[data-v-d05a79d0]{padding-left:20px}.placeholder__list li[data-v-d05a79d0]{line-height:1.55;margin-bottom:var(--sm)}.cta-block[data-v-d05a79d0]{background:var(--gp);border-radius:var(--r-card);padding:var(--xl);text-align:center}.cta-block p[data-v-d05a79d0]{margin:0 0 var(--md)}";
+
+export { index_vue_vue_type_style_index_0_scoped_d05a79d0_lang as i };
+//# sourceMappingURL=index-styles-1.mjs-bKhFkS0P.mjs.map
