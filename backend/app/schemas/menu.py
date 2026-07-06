@@ -42,3 +42,50 @@ class WeekMenuSave(BaseModel):
     week_start: date | None = None
     name: str = "Меню на неделю"
     meals: list[MenuMealSave]
+
+
+# ── Генерация меню (этап A: расчёт на бэке) ────────────────────────────
+class GeneratedMealOut(BaseModel):
+    """Слот сгенерированного меню. id — MenuMeal.id (для сохранённого меню)
+    или порядковый индекс (для preview без сохранения)."""
+    id: int | None = None
+    day_index: int
+    meal_type: str
+    is_batch: bool = False
+    recipe: RecipeOut
+
+
+class GeneratedMenuOut(BaseModel):
+    id: int | None = None
+    week_start: date
+    name: str
+    meals: list[GeneratedMealOut]
+
+
+class MenuGenerationOut(BaseModel):
+    """Полный ответ генератора: меню + метаданные для бейджей/шильдиков фронта."""
+    menu: GeneratedMenuOut
+    adult_equivalent: float
+    meal_targets: dict = {}
+    use_snack: bool = False
+    slots: list[str] = []
+    fallback_applied: dict | None = None
+    stats: dict = {}
+
+
+class MenuGenerateIn(BaseModel):
+    """Тело для авторизованной генерации.
+
+    seed=None → стабильный seed(user, week): перезагрузка даёт то же меню.
+    preferences=None → берутся сохранённые current_user.preferences. Клиент может
+    прислать актуальные prefs (например, ещё не синхронизированные с сервером через
+    профиль) — расчёт всё равно целиком на бэке.
+    """
+    seed: int | None = None
+    preferences: dict | None = None
+
+
+class MenuGeneratePreviewIn(BaseModel):
+    """Тело для онбординга (без юзера): prefs передаются явно, меню не сохраняется."""
+    preferences: dict | None = None
+    seed: int | None = None

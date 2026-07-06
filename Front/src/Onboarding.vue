@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useMenuStore } from '@/stores/menuStore'
 import { useTrack } from '@/composables/useTrack'
-import { generateWeekMenu } from '@/utils/mealPlanGenerator'
+// Генерация меню ушла на бэк (этап A) — aha-экран дёргает POST /menu/generate-preview.
 const { track, trackRecipe, EVENT } = useTrack()
 
 const onboardingStartTs = Date.now()
@@ -143,7 +143,7 @@ async function goStep(id) {
     if (!isLoggedIn.value) {
       savePreferencesToStore()
     }
-    generateAhaMenu()
+    await generateAhaMenu()
     track(EVENT.ONBOARDING_AHA_SHOWN, {
       weekDishCount: ahaWeek.value.reduce((s, d) => s + (d.meals?.length || 0), 0),
       avgKcal: Math.round(
@@ -438,6 +438,8 @@ function attachTopCardDrag() {
 // Генерируем недельное меню для показа на Aha-экране
 const ahaWeek = ref([])
 const ahaResult = ref(null)  // содержит { stats, fallbackApplied, adultEquivalent, useSnack }
+const ahaGenerated = ref(null)  // сырой ответ /menu/generate-preview — для applyGeneratedMenu
+const ahaLoading = ref(false)
 const activeTab = ref('menu')
 
 const DAYS = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
@@ -457,11 +459,27 @@ function getBadges(dish, dayIdx, mealType) {
   return badges.slice(0, 2)
 }
 
-function generateAhaMenu() {
-  const dishes = DISHES.value
-  if (!dishes.length) return
+// RecipeOut (ответ бэка, snake_case) → внутренний dish-формат aha-шаблона.
+// Тот же набор полей, что даёт mapRecipeToDish.
+function mapPreviewRecipe(r) {
+  return {
+    id: String(r.id),
+    name: r.name,
+    emoji: r.emoji || '🍽️',
+    bg: r.bg_color || '#E4F5EA',
+    time: r.time_minutes ? `${r.time_minutes} мин` : '—',
+    kcal: r.kcal ? `${Math.round(r.kcal)} ккал` : '—',
+    desc: r.description || '',
+    tags: r.tags || [],
+    type: r.meal_type || 'dinner',
+    ingredients: r.ingredients || [],
+    steps: r.steps || [],
+  }
+}
 
-  // Собираем prefs в том же формате, в котором он сохраняется в authStore
+// Генерация меню для aha-экрана — целиком на бэке (этап A).
+// prefs собираем в том же формате, что сохраняется в authStore, и шлём в preview.
+async function generateAhaMenu() {
   const prefs = {
     familySize: famCount.value,
     familyTags: { ...familyTags },
@@ -481,24 +499,48 @@ function generateAhaMenu() {
     dislikedDishIds: dislikedIds.value,
   }
 
-  // Генератор работает с тем же форматом recipe, что DISHES даёт после mapRecipeToDish
-  const result = generateWeekMenu(dishes, prefs)
+  const API_URL = import.meta.env.VITE_API_URL || '/api'
+  ahaLoading.value = true
+  try {
+    const res = await fetch(`${API_URL}/menu/generate-preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferences: prefs }),
+    })
+    if (!res.ok) throw new Error(`preview failed: ${res.status}`)
+    const data = await res.json()
+    ahaGenerated.value = data  // сырой ответ — уйдёт в menuStore.applyGeneratedMenu для гостя
 
-  // Преобразуем в формат, который ждёт текущий шаблон Aha-экрана
-  // (массив с .day, .meals[].t, .meals[].dish, .meals[].prepType, .dayKcal)
-  const TYPE_LABELS = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' }
-  ahaWeek.value = result.weekMenu.map(d => ({
-    day: d.day,
-    dayKcal: d.dayKcal,
-    meals: d.meals.map(m => ({
-      t: TYPE_LABELS[m.slot] || m.slot,
-      dish: m.recipe,
-      prepType: m.isBatch ? 'reheat' : 'fresh',
-    })),
-  }))
+    // Регруппируем плоские meals обратно по дням для шаблона aha-экрана
+    // (массив с .day, .meals[].t, .meals[].dish, .meals[].prepType, .dayKcal)
+    const TYPE_LABELS = { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' }
+    const byDay = DAYS.map(day => ({ day, dayKcal: 0, meals: [] }))
+    for (const m of (data.menu?.meals || [])) {
+      const d = byDay[m.day_index]
+      if (!d) continue
+      d.meals.push({
+        t: TYPE_LABELS[m.meal_type] || m.meal_type,
+        dish: mapPreviewRecipe(m.recipe),
+        prepType: m.is_batch ? 'reheat' : 'fresh',
+      })
+      d.dayKcal += Number(m.recipe?.kcal) || 0
+    }
+    ahaWeek.value = byDay
 
-  // Сохраняем метаданные генерации, чтобы шаблон мог показать шильдик и stats
-  ahaResult.value = result
+    ahaResult.value = {
+      stats: data.stats,
+      fallbackApplied: data.fallback_applied,
+      adultEquivalent: data.adult_equivalent,
+      useSnack: data.use_snack,
+    }
+  } catch (e) {
+    console.error('generateAhaMenu:', e)
+    ahaWeek.value = []
+    ahaGenerated.value = null
+    ahaResult.value = null
+  } finally {
+    ahaLoading.value = false
+  }
 }
 
 // Prep Day список для Batch режима
@@ -636,9 +678,10 @@ async function goToMenuSeamlessly() {
   }
 
   // Передаём сгенерированное меню в menuStore (только для анонимных юзеров —
-  // у залогиненных меню придёт с сервера в MenuView.fetchWeekMenu)
-  if (!isLoggedIn.value && ahaResult.value && menuStore.applyOnboardingMenu) {
-    menuStore.applyOnboardingMenu(ahaResult.value)
+  // у залогиненных меню придёт с сервера в MenuView.fetchWeekMenu).
+  // applyGeneratedMenu принимает сырой ответ /menu/generate-preview.
+  if (!isLoggedIn.value && ahaGenerated.value && menuStore.applyGeneratedMenu) {
+    menuStore.applyGeneratedMenu(ahaGenerated.value)
   }
 
   if (isLoggedIn.value) {

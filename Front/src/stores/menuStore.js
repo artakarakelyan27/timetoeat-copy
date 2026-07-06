@@ -15,8 +15,9 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+// generateWeekMenu больше не импортируем — генерация ушла на бэк (этап A).
+// scaleIngredients/computeAdultEquivalent пока нужны generateShoppingList (этап B).
 import {
-  generateWeekMenu,
   scaleIngredients,
   computeAdultEquivalent,
 } from '@/utils/mealPlanGenerator'
@@ -47,6 +48,39 @@ function authHeaders() {
 }
 
 const DAY_NAMES = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+
+// Маппинг рецепта из ответа API во внутренний формат фронта.
+// Единый источник правды для fetchRecipes и applyGeneratedMenu (меню с бэка
+// может вернуть рецепт, которого ещё нет в ленте — домержим его тем же маппингом).
+function mapApiRecipe(r) {
+  return augmentRecipeVisual({
+    id: String(r.id),
+    name: r.name,
+    emoji: r.emoji,
+    bg: r.bg_color,
+    type: r.meal_type,
+    time: r.time_minutes,
+    servings: Math.max(1, Number(r.servings) || 1),
+    kcal: r.kcal,
+    protein: r.proteins,
+    fat: r.fats,
+    carbs: r.carbs,
+    category: r.category,
+    tags: r.tags || [],
+    isVeg: r.is_vegetarian,
+    isVegan: r.is_vegan,
+    isFast: r.is_fast,
+    isGlutenFree: r.is_gluten_free,
+    isLactoseFree: r.is_lactose_free,
+    cuisine: r.cuisine,
+    desc: r.description,
+    steps: r.steps,
+    ings: (r.ingredients || []).map(i => ({ n: i.name, q: i.quantity, cat: i.category, cid: i.canonical_food_id ?? null })),
+    authorName: r.author_name || r.author?.name || null,
+    createdBy: r.created_by ?? r.author?.id ?? null,
+    isUserRecipe: !!(r.created_by || r.is_user_recipe || r.author_name || r.author?.name),
+  })
+}
 
 // ───────────────────────────────────────────────────────────────────────
 // УМНОЕ СУММИРОВАНИЕ КОЛИЧЕСТВ (для генерации списка покупок)
@@ -188,46 +222,9 @@ export const useMenuStore = defineStore('menu', () => {
       const res = await fetch(url)
       if (!res.ok) throw new Error('Ошибка загрузки рецептов')
       const data = await res.json()
-      recipes.value = data.map(r => augmentRecipeVisual({
-        id: String(r.id),
-        name: r.name,
-        emoji: r.emoji,
-        bg: r.bg_color,
-        type: r.meal_type,
-        time: r.time_minutes,
-        // Количество порций — нужно для масштабирования покупок под семью.
-        // Бэк отдаёт 1 для системных рецептов (legacy: считаем «на 1 порцию»)
-        // и реальное значение для пользовательских (после миграции 001).
-        servings: Math.max(1, Number(r.servings) || 1),
-        kcal: r.kcal,
-        // Бэк отдаёт proteins/fats/carbs — раньше тут было protein/fat (опечатка),
-        // из-за чего скоринг по БЖУ всегда работал с фолбэком от kcal.
-        protein: r.proteins,
-        fat: r.fats,
-        carbs: r.carbs,
-        category: r.category,
-        tags: r.tags || [],
-        isVeg: r.is_vegetarian,
-        isVegan: r.is_vegan,
-        isFast: r.is_fast,
-        isGlutenFree: r.is_gluten_free,
-        isLactoseFree: r.is_lactose_free,
-        cuisine: r.cuisine,
-        desc: r.description,
-        steps: r.steps,
-        ings: (r.ingredients || []).map(i => ({ n: i.name, q: i.quantity, cat: i.category, cid: i.canonical_food_id ?? null })),
-        // ── ПОЛЯ АВТОРА ─────────────────────────────────────────────
-        // Используются для бейджа «Добавлено пользователем «имя»» в ленте.
-        // Defensive чтение: бэк может отдавать author_name напрямую (через
-        // JOIN с users) или вложенным объектом author.name. Если ни одного
-        // поля нет — бейдж просто не отрисуется.
-        // isUserRecipe true ставится по любому маркеру: created_by, явный
-        // флаг is_user_recipe или присутствие author_name. Это позволяет
-        // фронту не зависеть от точного формата ответа бэка.
-        authorName: r.author_name || r.author?.name || null,
-        createdBy: r.created_by ?? r.author?.id ?? null,
-        isUserRecipe: !!(r.created_by || r.is_user_recipe || r.author_name || r.author?.name),
-      }))
+      // Маппинг вынесен в module-level mapApiRecipe (переиспользуется в
+      // applyGeneratedMenu). Поля-автора и servings/БЖУ — см. там же.
+      recipes.value = data.map(mapApiRecipe)
     } catch (e) {
       console.error('Не удалось загрузить рецепты:', e)
     } finally {
@@ -552,43 +549,90 @@ export const useMenuStore = defineStore('menu', () => {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // НОВАЯ ЛОГИКА: ГЕНЕРАЦИЯ МЕНЮ ИЗ STORE
+  // ГЕНЕРАЦИЯ МЕНЮ (этап A: расчёт на бэке, фронт только применяет ответ)
   // ═══════════════════════════════════════════════════════════════════
   /**
-   * Перегенерирует меню на неделю на основе prefs (из authStore.preferences).
-   * Используется на главном экране (E-01 «Перегенерировать») и в онбординге.
-   * Применяет результат сразу к weekMenu.
+   * Применяет к стору меню, сгенерированное бэком (ответ MenuGenerationOut).
+   * Общий код для regenerateWeekMenu (залогинен) и онбординга (preview).
    *
-   * @param {Object} prefs — preferences из authStore
-   * @returns {Object} — результат generateWeekMenu (для UI: stats, fallback)
+   * @param {Object} data — { menu:{ meals:[{id,day_index,meal_type,is_batch,recipe}] },
+   *                          stats, fallback_applied, adult_equivalent }
    */
-  function regenerateWeekMenu(prefs) {
-    if (!recipes.value?.length) {
-      console.warn('regenerateWeekMenu: рецепты не загружены')
+  function applyGeneratedMenu(data) {
+    const meals = data?.menu?.meals
+    if (!Array.isArray(meals)) return
+
+    // 1. Домержим рецепты из ответа в recipes.value — бэк мог вернуть рецепт,
+    //    которого нет в текущей ленте (иначе getRecipeById → null, ккал/покупки
+    //    не посчитаются). Ключ — String(id), как во всём сторе.
+    const known = new Set(recipes.value.map(r => r.id))
+    const extra = []
+    for (const m of meals) {
+      if (m.recipe && !known.has(String(m.recipe.id))) {
+        known.add(String(m.recipe.id))
+        extra.push(mapApiRecipe(m.recipe))
+      }
+    }
+    if (extra.length) recipes.value = [...recipes.value, ...extra]
+
+    // 2. Собираем weekMenu из плоских meals (та же трансформация, что fetchWeekMenu)
+    weekMenu.value = DAY_NAMES.map(date => ({ date, kcal: 0, meals: [] }))
+    for (const meal of meals) {
+      const day = weekMenu.value[meal.day_index]
+      if (!day) continue
+      day.meals.push({
+        id: String(meal.id),
+        type: meal.meal_type,
+        dishId: String(meal.recipe.id),
+        isBatch: !!meal.is_batch,
+      })
+    }
+    weekMenu.value.forEach((_, idx) => recalculateDayKcal(idx))
+
+    // 3. Метаданные для UI (шильдик fallback, бейджи stats)
+    lastGenerationStats.value = data.stats || null
+    lastFallbackApplied.value = data.fallback_applied || null
+    lastAdultEquivalent.value = data.adult_equivalent ?? 1
+  }
+
+  /**
+   * Перегенерирует меню на неделю. Расчёт целиком на бэке
+   * (POST /menu/week/{week}/generate) — он же сохраняет меню, поэтому
+   * saveWeekMenu тут НЕ вызываем (иначе двойная запись / гонка).
+   *
+   * @param {Object|null} prefs — preferences (клиент — источник prefs; если null,
+   *                              бэк возьмёт сохранённые current_user.preferences)
+   * @param {number|null} seed  — null → стабильный seed(user, week); иное значение
+   *                              (например Date.now()) → осознанная перетасовка
+   * @returns {Promise<Object|null>} — ответ бэка (menu, stats, fallback) или null
+   */
+  async function regenerateWeekMenu(prefs = null, seed = null) {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.warn('regenerateWeekMenu: требуется авторизация')
       return null
     }
-
-    const result = generateWeekMenu(recipes.value, prefs)
-
-    // Преобразуем формат в внутренний weekMenu
-    weekMenu.value = DAY_NAMES.map((date, idx) => {
-      const dayData = result.weekMenu[idx]
-      const meals = (dayData?.meals || []).map(m => ({
-        id: crypto.randomUUID?.() || `${Date.now()}_${Math.random()}`,
-        type: m.slot,
-        dishId: String(m.recipe.id),
-        isBatch: !!m.isBatch,
-      }))
-      return { date, kcal: dayData?.dayKcal || 0, meals }
-    })
-
-    // Сохраняем метаданные последней генерации для UI
-    lastGenerationStats.value = result.stats
-    lastFallbackApplied.value = result.fallbackApplied
-    lastAdultEquivalent.value = result.adultEquivalent
-
-    saveWeekMenu()
-    return result
+    menuLoading.value = true
+    try {
+      const weekStart = getMonday()
+      const res = await fetch(`${API_URL}/menu/week/${weekStart}/generate`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ seed, preferences: prefs || null }),
+      })
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        throw new Error(`generate failed: ${res.status} ${body.slice(0, 200)}`)
+      }
+      const data = await res.json()
+      applyGeneratedMenu(data)
+      return data
+    } catch (e) {
+      console.error('Не удалось сгенерировать меню:', e)
+      return null
+    } finally {
+      menuLoading.value = false
+    }
   }
 
   // ─── ACTIONS: ПОКУПКИ ───
@@ -887,6 +931,7 @@ export const useMenuStore = defineStore('menu', () => {
     applyOnboardingMenu,
     // НОВОЕ:
     regenerateWeekMenu,
+    applyGeneratedMenu,
     lastGenerationStats,
     lastFallbackApplied,
     lastAdultEquivalent,
