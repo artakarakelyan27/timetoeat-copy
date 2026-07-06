@@ -6,6 +6,7 @@ import os
 from app.database import engine, Base
 from app.routers import auth, recipes, menu, shopping, events, user_recipes, products
 from app.routers.canonical_foods import router as canonical_foods_router
+from app.routers.seo import router as seo_router
 # Загружаем .env ДО создания таблиц и инициализации сервисов —
 # чтобы SECRET_KEY и DATABASE_URL подхватились из конфига.
 load_dotenv()
@@ -14,9 +15,6 @@ load_dotenv()
 # использовать Alembic-миграции (заготовка папки уже есть).
 import app.models  # noqa: F401 — регистрация моделей в metadata
 Base.metadata.create_all(bind=engine)
-
-from app.routers.seo import router as seo_router
-app.include_router(seo_router, prefix="/api/seo", tags=["seo"])
 
 app = FastAPI(
     title="Время Есть API",
@@ -50,6 +48,7 @@ app.include_router(shopping.router)
 app.include_router(events.router)
 app.include_router(products.router)
 app.include_router(canonical_foods_router)
+app.include_router(seo_router, prefix="/api/seo", tags=["seo"])
 
 @app.get("/", tags=["health"])
 def root():
